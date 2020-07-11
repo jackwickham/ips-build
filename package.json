@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "ips-plugin-build",
+  "version": "1.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Github action for building IPS plugins",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
@@ -11,6 +11,7 @@
     "lint": "eslint src/**/*.ts",
     "pack": "ncc build",
     "test": "jest",
+    "test-debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "all": "npm run build && npm run format && npm run lint && npm run pack && npm test"
   },
   "repository": {
@@ -25,6 +26,7 @@
   "author": "Jack Wickham",
   "license": "MIT",
   "dependencies": {
+    "@actions/artifact": "^0.3.2",
     "@actions/core": "^1.2.0",
     "@actions/exec": "^1.0.4",
     "@actions/glob": "^0.1.0",

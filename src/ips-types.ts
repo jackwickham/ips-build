@@ -1,4 +1,4 @@
-import { XmlObject } from "xml";
+import {XmlObject} from "xml";
 
 // Types that represent has has to be serialised into the XML file
 
@@ -47,7 +47,8 @@ export type ResourceContents = [
     };
   },
   string
-] & XmlObject;
+] &
+  XmlObject;
 
 export type HtmlFile = {
   html: ResourceContents;
@@ -61,7 +62,7 @@ export type JsFile = {
   js: ResourceContents;
 } & XmlObject;
 
-export type ResourceFile=  {
+export type ResourceFile = {
   resources: ResourceContents;
 } & XmlObject;
 
@@ -81,9 +82,9 @@ export type Version = {
   version: {
     _attr: {
       human: string;
-      long: number;
+      long: number | string;
     };
-    _cdata: string;
+    _cdata?: string;
   };
 } & XmlObject;
 
@@ -99,7 +100,7 @@ export type Uninstall = XmlString;
 export type SettingsCode = XmlString;
 
 export interface XmlPrecursor {
-  [key: string]: XmlObject | XmlObject[] | undefined
+  [key: string]: XmlObject | XmlObject[] | undefined;
 }
 
 export interface PluginData extends XmlPrecursor {
@@ -153,4 +154,8 @@ export interface WidgetsFile {
     menu_style: string;
     embeddable: boolean;
   };
+}
+
+export interface VersionsFile {
+  [key: string]: string;
 }
