@@ -14,10 +14,14 @@ export type Hook = {
 } & XmlObject;
 
 export type Setting = {
-  setting: {
-    key: string;
-    default: string;
-  };
+  setting: [
+    {
+      key: string;
+    },
+    {
+      default: string;
+    }
+  ];
 } & XmlObject;
 
 export type Task = {
@@ -71,7 +75,7 @@ export type LangWord = {
     {
       _attr: {
         key: string;
-        js: boolean;
+        js: 0 | 1;
       };
     },
     string
@@ -92,12 +96,12 @@ export type CmsTemplates = {
   _cdata: string;
 } & XmlObject;
 
-export type XmlString = {
+type CData = {
   _cdata: string;
 } & XmlObject;
 
-export type Uninstall = XmlString;
-export type SettingsCode = XmlString;
+export type Uninstall = CData;
+export type SettingsCode = CData;
 
 export interface XmlPrecursor {
   [key: string]: XmlObject | XmlObject[] | undefined;

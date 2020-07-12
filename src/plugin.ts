@@ -6,7 +6,6 @@ import {
   ResourceContents,
   Uninstall,
   SettingsCode,
-  XmlString,
   PluginData,
   Hook,
   Setting,
@@ -24,7 +23,7 @@ import {
   WidgetsFile,
   VersionsFile,
 } from "./ips-types";
-import {objectToXml} from "./xml";
+import * as xml from "./xml";
 import {parsePhpAssociativeArray} from "./php";
 
 type MaybePromisify<T> = {
@@ -41,6 +40,7 @@ export class Plugin {
   public constructor(
     basePath: string,
     private name: string,
+    private snapshot: boolean,
     private humanVersion: string,
     private longVersion: number,
     private website?: string
@@ -49,12 +49,9 @@ export class Plugin {
   }
 
   public async getXml(): Promise<string> {
-    return objectToXml(
-      {
-        plugin: await this.getData(),
-      },
-      "plugin"
-    );
+    return xml.serialise({
+      plugin: xml.convertForXml(await this.getData()),
+    });
   }
 
   public async getData(): Promise<PluginData> {
@@ -82,8 +79,8 @@ export class Plugin {
     /* eslint-enable @typescript-eslint/camelcase */
   }
 
-  private async getHooks(): Promise<Hook[]> {
-    const hooks: HooksFile = JSON.parse(await this.readFile("dev", "hooks.json"));
+  public async getHooks(): Promise<Hook[]> {
+    const hooks: HooksFile = JSON.parse(await this.readFile("dev/hooks.json"));
     return Promise.all(
       _.map(hooks, async (hook, key) => ({
         hook: {
@@ -92,29 +89,33 @@ export class Plugin {
             class: hook.class,
             filename: key,
           },
-          _cdata: await this.readFile("hooks", `${key}.php`),
+          _cdata: await this.readFile(`hooks/${key}.php`),
         },
       }))
     );
   }
 
-  private async getSettings(): Promise<Setting[]> {
+  public async getSettings(): Promise<Setting[]> {
     return await this.readFileIfExistsOrElse(
       "dev/settings.json",
       async (file) => {
         const settings: SettingsFile = JSON.parse(file);
         return settings.map((setting) => ({
-          setting: {
-            key: setting.key,
-            default: setting.default,
-          },
+          setting: [
+            {
+              key: setting.key,
+            },
+            {
+              default: setting.default,
+            },
+          ],
         }));
       },
       []
     );
   }
 
-  private async getTasks(): Promise<Task[]> {
+  public async getTasks(): Promise<Task[]> {
     return await this.readFileIfExistsOrElse(
       "dev/tasks.json",
       async (file) => {
@@ -123,7 +124,7 @@ export class Plugin {
           _.map(tasks, async (frequency, key) => ({
             task: {
               _attr: {key, frequency},
-              _cdata: await this.readFile("tasks", `${key}.php`),
+              _cdata: await this.readFile(`tasks/${key}.php`),
             },
           }))
         );
@@ -132,19 +133,19 @@ export class Plugin {
     );
   }
 
-  private async getWidgets(): Promise<Widget[]> {
+  public async getWidgets(): Promise<Widget[]> {
     return await this.readFileIfExistsOrElse(
       "dev/widgets.json",
       async (file) => {
         const widgets: WidgetsFile = JSON.parse(file);
         return await Promise.all(
           _.map(widgets, async (data, key) => {
-            const contents = (await this.readFile("tasks", `${key}.php`))
+            const contents = (await this.readFile(`widgets/${key}.php`))
               .replace(
                 /namespace IPS\\plugins\\[^\\]+\\widgets/g,
-                "namespace IPS\\plugins\\<{LOCATION>\\widgets"
+                "namespace IPS\\plugins\\<{LOCATION}>\\widgets"
               )
-              .replace(/public \$plugin = '\d+';/g, "public $plugin = '<ID>';")
+              .replace(/public \$plugin = '\d+';/g, "public $plugin = '<{ID}>';")
               .replace("public $app = '';", "");
             return {
               widget: {
@@ -162,29 +163,29 @@ export class Plugin {
     );
   }
 
-  private async getHtmlFiles(): Promise<HtmlFile[]> {
+  public async getHtmlFiles(): Promise<HtmlFile[]> {
     const resources = await this.getResources("html", "phtml");
     return resources.map((contents) => ({
       html: contents,
     }));
   }
 
-  private async getCssFiles(): Promise<CssFile[]> {
+  public async getCssFiles(): Promise<CssFile[]> {
     const resources = await this.getResources("css", "css");
     return resources.map((contents) => ({
       css: contents,
     }));
   }
 
-  private async getJsFiles(): Promise<JsFile[]> {
+  public async getJsFiles(): Promise<JsFile[]> {
     const resources = await this.getResources("js", "js");
     return resources.map((contents) => ({
       js: contents,
     }));
   }
 
-  private async getResourceFiles(): Promise<ResourceFile[]> {
-    const resources = await this.getResources("resources", "html", true);
+  public async getResourceFiles(): Promise<ResourceFile[]> {
+    const resources = await this.getResources("resources", "*", "!**/index.html");
     return resources.map((contents) => ({
       resources: contents,
     }));
@@ -193,9 +194,10 @@ export class Plugin {
   private async getResources(
     key: string,
     suffix: string,
-    negate = false
+    ...extraGlobs: string[]
   ): Promise<ResourceContents[]> {
-    const globber = await glob.create(`${negate ? "!" : ""}${this.basePath}/${key}/**/*.${suffix}`);
+    extraGlobs.unshift(`${this.basePath}/dev/${key}/**/*.${suffix}`);
+    const globber = await glob.create(extraGlobs.join("\n"));
     const files = await globber.glob();
 
     return await Promise.all(
@@ -204,7 +206,7 @@ export class Plugin {
         const result: ResourceContents = [
           {
             _attr: {
-              filename,
+              filename: path.relative(path.join(this.basePath, "dev", key), filename),
             },
           },
           rawContents.toString("base64"),
@@ -214,7 +216,7 @@ export class Plugin {
     );
   }
 
-  private async getLang(): Promise<LangWord[]> {
+  public async getLang(): Promise<LangWord[]> {
     return _.flatten(
       await Promise.all([
         this.readFileIfExistsOrElse(
@@ -226,7 +228,7 @@ export class Plugin {
                 {
                   _attr: {
                     key,
-                    js: false,
+                    js: 0,
                   },
                 },
                 value,
@@ -244,7 +246,7 @@ export class Plugin {
                 {
                   _attr: {
                     key,
-                    js: true,
+                    js: 1,
                   },
                 },
                 value,
@@ -257,19 +259,32 @@ export class Plugin {
     );
   }
 
-  private async getVersions(): Promise<Version[]> {
+  public async getVersions(): Promise<Version[]> {
     return await this.readFileIfExistsOrElse(
       "dev/versions.json",
       async (versionsFile) => {
         const versions: VersionsFile = JSON.parse(versionsFile);
+        if (!this.snapshot) {
+          if (versions[this.longVersion] === undefined) {
+            throw new Error(
+              `versions.json doesn't contain an entry for the current version ${this.longVersion}`
+            );
+          }
+          if (versions[this.longVersion] !== this.humanVersion) {
+            throw new Error(
+              `The versions.json entry for ${this.longVersion}, ${
+                versions[this.longVersion]
+              }, doesn't match the tag version ${this.humanVersion}`
+            );
+          }
+        }
         return await Promise.all(
           _.map(versions, async (human, long) => {
-            const upgradeFile: Partial<XmlString> =
-              (await this.getFileIfExistsAsCdata(
-                "dev",
-                "setup",
-                long === "10000" ? "install.php" : `${long}.php`
-              )) || {};
+            const upgradeFile = await this.readFileIfExistsOrElse<{_cdata?: string}>(
+              `dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`,
+              (contents) => ({_cdata: contents}),
+              {}
+            );
             return {
               version: {
                 ...upgradeFile,
@@ -286,25 +301,28 @@ export class Plugin {
     );
   }
 
-  private async getUninstall(): Promise<Uninstall | undefined> {
-    return await this.getFileIfExistsAsCdata("uninstall.php");
+  public async getUninstall(): Promise<Uninstall | undefined> {
+    return await this.readFileIfExistsOrElse(
+      "dev/uninstall.php",
+      (contents) => ({
+        _cdata: contents,
+      }),
+      undefined
+    );
   }
 
-  private async getSettingsCode(): Promise<SettingsCode | undefined> {
-    return await this.getFileIfExistsAsCdata("settings.php");
+  public async getSettingsCode(): Promise<SettingsCode | undefined> {
+    return await this.readFileIfExistsOrElse(
+      "dev/settings.php",
+      (contents) => ({
+        _cdata: contents,
+      }),
+      undefined
+    );
   }
 
-  private async getFileIfExistsAsCdata(...file: string[]): Promise<XmlString | undefined> {
-    if (await this.fileExists(...file)) {
-      return {
-        _cdata: await this.readFile(...file),
-      };
-    }
-    return undefined;
-  }
-
-  private async readFile(...file: string[]): Promise<string> {
-    return fs.readFile(path.join(this.basePath, ...file), {encoding: "utf8"});
+  private async readFile(file: string): Promise<string> {
+    return fs.readFile(path.join(this.basePath, file), {encoding: "utf8"});
   }
 
   private async readFileIfExistsOrElse<T>(
@@ -312,16 +330,15 @@ export class Plugin {
     ifPresent: (f: string) => T | Promise<T>,
     orElse: T
   ): Promise<T> {
-    if (await this.fileExists(file)) {
-      return await ifPresent(await this.readFile(file));
+    let contents;
+    try {
+      contents = await this.readFile(file);
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return orElse;
+      }
+      throw e;
     }
-    return orElse;
-  }
-
-  private async fileExists(...file: string[]): Promise<boolean> {
-    return fs
-      .access(path.join(this.basePath, ...file))
-      .then(() => true)
-      .catch(() => false);
+    return await ifPresent(contents);
   }
 }

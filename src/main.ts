@@ -21,6 +21,7 @@ async function run(): Promise<void> {
     const plugin = new Plugin(
       basePath,
       name,
+      version.snapshot,
       version.human,
       version.long,
       core.getInput("website")

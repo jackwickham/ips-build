@@ -1076,6 +1076,7 @@ function onceStrict (fn) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.parsePhpAssociativeArray = exports.parsePhpArray = void 0;
 const preambleRegex = /^.+\$\S+\s*=\s*(\[|\\?array\s*\()/is;
 const skipRegex = /^(?:\s+|\/\/.*|#.*|\/\*[^]*?\*\/?)/;
 const endRegex = /^(?:\]|\))\s*;/;
@@ -3650,6 +3651,25 @@ exports.StatusReporter = StatusReporter;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3658,13 +3678,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
-};
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
@@ -3681,7 +3694,7 @@ function run() {
             const name = core.getInput("name", { required: true });
             const xmlPath = path.join(basePath, "plugin.xml");
             core.info(`Building ${name} version ${version.human} (${version.long})`);
-            const plugin = new plugin_1.Plugin(basePath, name, version.human, version.long, core.getInput("website"));
+            const plugin = new plugin_1.Plugin(basePath, name, version.snapshot, version.human, version.long, core.getInput("website"));
             yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
             yield artifact
                 .create()
@@ -3802,21 +3815,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const exec = __importStar(__webpack_require__(986));
+exports.getVersion = void 0;
+const exec_1 = __webpack_require__(986);
+const versionRegex = /^v?((\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?)$/;
 function getVersion(path) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const gitVersion = yield getGitVersion(path);
+        const matches = versionRegex.exec(gitVersion);
+        if (matches === null) {
+            throw new Error("Tag did not match expected format \\d+.\\d+.\\d+");
+        }
+        const humanVersion = matches[1];
+        if (matches[2].length > 2 ||
+            matches[3].length > 2 ||
+            matches[4].length > 2 ||
+            ((_a = matches[5]) === null || _a === void 0 ? void 0 : _a.length) > 2) {
+            throw new Error(`Version ${humanVersion} would overflow the long version number. You should probably tag a release.`);
+        }
+        const longVersion = parseInt(matches[2]) * 100 * 100 * 100 +
+            parseInt(matches[3]) * 100 * 100 +
+            parseInt(matches[4]) * 100 +
+            (matches[5] ? parseInt(matches[5]) : 0);
         return {
-            human: gitVersion,
-            long: toLongVersion(gitVersion),
+            human: humanVersion,
+            long: longVersion,
+            snapshot: matches[5] !== undefined,
         };
     });
 }
@@ -3832,24 +3857,11 @@ function getGitVersion(path) {
             },
             cwd: path,
         };
-        if ((yield exec.exec("git", ["describe", "--tags"], options)) !== 0 || !output) {
+        if ((yield exec_1.exec("git", ["describe", "--tags"], options)) !== 0 || !output) {
             throw new Error("Failed to find a git tag. Make sure the repo is tagged and was checked out with fetch-depth: 0.");
         }
         return output.trim();
     });
-}
-exports.getGitVersion = getGitVersion;
-function toLongVersion(humanVersion) {
-    const re = /^v?(\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?$/;
-    const matches = re.exec(humanVersion);
-    if (matches === null) {
-        throw new Error("Tag did not match expected format \\d+.\\d+.\\d+");
-    }
-    const longVersion = parseInt(matches[1]) * 100 * 100 * 100 +
-        parseInt(matches[2]) * 100 * 100 +
-        parseInt(matches[3]) * 100 +
-        (matches[4] ? parseInt(matches[4]) : 0);
-    return longVersion;
 }
 
 
@@ -4357,22 +4369,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.convertForXml = exports.serialise = void 0;
 const xml_1 = __importDefault(__webpack_require__(789));
 const lodash_1 = __importDefault(__webpack_require__(557));
-function objectToXml(obj, root) {
-    const xmlified = {
-        [root]: lodash_1.default.filter(lodash_1.default.map(obj[root], (val, key) => {
-            if ((lodash_1.default.isArray(val) && val.length === 0) || val === undefined) {
-                return null;
-            }
-            return {
-                [key]: val,
-            };
-        }), (v) => v !== null),
-    };
-    return xml_1.default(xmlified);
+function serialise(obj) {
+    return xml_1.default(obj, { declaration: true });
 }
-exports.objectToXml = objectToXml;
+exports.serialise = serialise;
+function convertForXml(obj) {
+    return lodash_1.default.filter(lodash_1.default.map(obj, (val, key) => {
+        if ((lodash_1.default.isArray(val) && val.length === 0) || val === undefined) {
+            return null;
+        }
+        return {
+            [key]: val,
+        };
+    }), (v) => v !== null);
+}
+exports.convertForXml = convertForXml;
 
 
 /***/ }),
@@ -5138,6 +5152,25 @@ exports.DefaultArtifactClient = DefaultArtifactClient;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -5147,22 +5180,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Plugin = void 0;
 const fs_1 = __webpack_require__(747);
 const path = __importStar(__webpack_require__(622));
 const glob = __importStar(__webpack_require__(281));
 const lodash_1 = __importDefault(__webpack_require__(557));
-const xml_1 = __webpack_require__(275);
+const xml = __importStar(__webpack_require__(275));
 const php_1 = __webpack_require__(77);
 function allPromises(obj) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -5170,8 +5197,9 @@ function allPromises(obj) {
     });
 }
 class Plugin {
-    constructor(basePath, name, humanVersion, longVersion, website) {
+    constructor(basePath, name, snapshot, humanVersion, longVersion, website) {
         this.name = name;
+        this.snapshot = snapshot;
         this.humanVersion = humanVersion;
         this.longVersion = longVersion;
         this.website = website;
@@ -5179,9 +5207,9 @@ class Plugin {
     }
     getXml() {
         return __awaiter(this, void 0, void 0, function* () {
-            return xml_1.objectToXml({
-                plugin: yield this.getData(),
-            }, "plugin");
+            return xml.serialise({
+                plugin: xml.convertForXml(yield this.getData()),
+            });
         });
     }
     getData() {
@@ -5212,7 +5240,7 @@ class Plugin {
     }
     getHooks() {
         return __awaiter(this, void 0, void 0, function* () {
-            const hooks = JSON.parse(yield this.readFile("dev", "hooks.json"));
+            const hooks = JSON.parse(yield this.readFile("dev/hooks.json"));
             return Promise.all(lodash_1.default.map(hooks, (hook, key) => __awaiter(this, void 0, void 0, function* () {
                 return ({
                     hook: {
@@ -5221,7 +5249,7 @@ class Plugin {
                             class: hook.class,
                             filename: key,
                         },
-                        _cdata: yield this.readFile("hooks", `${key}.php`),
+                        _cdata: yield this.readFile(`hooks/${key}.php`),
                     },
                 });
             })));
@@ -5232,10 +5260,14 @@ class Plugin {
             return yield this.readFileIfExistsOrElse("dev/settings.json", (file) => __awaiter(this, void 0, void 0, function* () {
                 const settings = JSON.parse(file);
                 return settings.map((setting) => ({
-                    setting: {
-                        key: setting.key,
-                        default: setting.default,
-                    },
+                    setting: [
+                        {
+                            key: setting.key,
+                        },
+                        {
+                            default: setting.default,
+                        },
+                    ],
                 }));
             }), []);
         });
@@ -5248,7 +5280,7 @@ class Plugin {
                     return ({
                         task: {
                             _attr: { key, frequency },
-                            _cdata: yield this.readFile("tasks", `${key}.php`),
+                            _cdata: yield this.readFile(`tasks/${key}.php`),
                         },
                     });
                 })));
@@ -5260,9 +5292,9 @@ class Plugin {
             return yield this.readFileIfExistsOrElse("dev/widgets.json", (file) => __awaiter(this, void 0, void 0, function* () {
                 const widgets = JSON.parse(file);
                 return yield Promise.all(lodash_1.default.map(widgets, (data, key) => __awaiter(this, void 0, void 0, function* () {
-                    const contents = (yield this.readFile("tasks", `${key}.php`))
-                        .replace(/namespace IPS\\plugins\\[^\\]+\\widgets/g, "namespace IPS\\plugins\\<{LOCATION>\\widgets")
-                        .replace(/public \$plugin = '\d+';/g, "public $plugin = '<ID>';")
+                    const contents = (yield this.readFile(`widgets/${key}.php`))
+                        .replace(/namespace IPS\\plugins\\[^\\]+\\widgets/g, "namespace IPS\\plugins\\<{LOCATION}>\\widgets")
+                        .replace(/public \$plugin = '\d+';/g, "public $plugin = '<{ID}>';")
                         .replace("public $app = '';", "");
                     return {
                         widget: {
@@ -5300,22 +5332,23 @@ class Plugin {
     }
     getResourceFiles() {
         return __awaiter(this, void 0, void 0, function* () {
-            const resources = yield this.getResources("resources", "html", true);
+            const resources = yield this.getResources("resources", "*", "!**/index.html");
             return resources.map((contents) => ({
                 resources: contents,
             }));
         });
     }
-    getResources(key, suffix, negate = false) {
+    getResources(key, suffix, ...extraGlobs) {
         return __awaiter(this, void 0, void 0, function* () {
-            const globber = yield glob.create(`${negate ? "!" : ""}${this.basePath}/${key}/**/*.${suffix}`);
+            extraGlobs.unshift(`${this.basePath}/dev/${key}/**/*.${suffix}`);
+            const globber = yield glob.create(extraGlobs.join("\n"));
             const files = yield globber.glob();
             return yield Promise.all(files.map((filename) => __awaiter(this, void 0, void 0, function* () {
                 const rawContents = yield fs_1.promises.readFile(filename);
                 const result = [
                     {
                         _attr: {
-                            filename,
+                            filename: path.relative(path.join(this.basePath, "dev", key), filename),
                         },
                     },
                     rawContents.toString("base64"),
@@ -5334,7 +5367,7 @@ class Plugin {
                             {
                                 _attr: {
                                     key,
-                                    js: false,
+                                    js: 0,
                                 },
                             },
                             value,
@@ -5348,7 +5381,7 @@ class Plugin {
                             {
                                 _attr: {
                                     key,
-                                    js: true,
+                                    js: 1,
                                 },
                             },
                             value,
@@ -5362,8 +5395,16 @@ class Plugin {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.readFileIfExistsOrElse("dev/versions.json", (versionsFile) => __awaiter(this, void 0, void 0, function* () {
                 const versions = JSON.parse(versionsFile);
+                if (!this.snapshot) {
+                    if (versions[this.longVersion] === undefined) {
+                        throw new Error(`versions.json doesn't contain an entry for the current version ${this.longVersion}`);
+                    }
+                    if (versions[this.longVersion] !== this.humanVersion) {
+                        throw new Error(`The versions.json entry for ${this.longVersion}, ${versions[this.longVersion]}, doesn't match the tag version ${this.humanVersion}`);
+                    }
+                }
                 return yield Promise.all(lodash_1.default.map(versions, (human, long) => __awaiter(this, void 0, void 0, function* () {
-                    const upgradeFile = (yield this.getFileIfExistsAsCdata("dev", "setup", long === "10000" ? "install.php" : `${long}.php`)) || {};
+                    const upgradeFile = yield this.readFileIfExistsOrElse(`dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`, (contents) => ({ _cdata: contents }), {});
                     return {
                         version: Object.assign(Object.assign({}, upgradeFile), { _attr: {
                                 human,
@@ -5376,43 +5417,36 @@ class Plugin {
     }
     getUninstall() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getFileIfExistsAsCdata("uninstall.php");
+            return yield this.readFileIfExistsOrElse("dev/uninstall.php", (contents) => ({
+                _cdata: contents,
+            }), undefined);
         });
     }
     getSettingsCode() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.getFileIfExistsAsCdata("settings.php");
+            return yield this.readFileIfExistsOrElse("dev/settings.php", (contents) => ({
+                _cdata: contents,
+            }), undefined);
         });
     }
-    getFileIfExistsAsCdata(...file) {
+    readFile(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (yield this.fileExists(...file)) {
-                return {
-                    _cdata: yield this.readFile(...file),
-                };
-            }
-            return undefined;
-        });
-    }
-    readFile(...file) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return fs_1.promises.readFile(path.join(this.basePath, ...file), { encoding: "utf8" });
+            return fs_1.promises.readFile(path.join(this.basePath, file), { encoding: "utf8" });
         });
     }
     readFileIfExistsOrElse(file, ifPresent, orElse) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (yield this.fileExists(file)) {
-                return yield ifPresent(yield this.readFile(file));
+            let contents;
+            try {
+                contents = yield this.readFile(file);
             }
-            return orElse;
-        });
-    }
-    fileExists(...file) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return fs_1.promises
-                .access(path.join(this.basePath, ...file))
-                .then(() => true)
-                .catch(() => false);
+            catch (e) {
+                if (e.code === "ENOENT") {
+                    return orElse;
+                }
+                throw e;
+            }
+            return yield ifPresent(contents);
         });
     }
 }
