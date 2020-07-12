@@ -3678,12 +3678,12 @@ function run() {
         try {
             const basePath = path.resolve(core.getInput("path") || "", process.env["GITHUB_WORKSPACE"]);
             const version = yield versions_1.getVersion(basePath);
-            const name = core.getInput("name");
+            const name = core.getInput("name", { required: true });
             const xmlPath = path.join(basePath, "plugin.xml");
             core.info(`Building ${name} version ${version.human} (${version.long})`);
             const plugin = new plugin_1.Plugin(basePath, name, version.human, version.long, core.getInput("website"));
             yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
-            yield artifact.create().uploadArtifact(`${name}.xml`, ["plugin.xml"], basePath);
+            yield artifact.create().uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
         }
         catch (error) {
             core.setFailed(error.message);
@@ -4357,7 +4357,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const xml_1 = __importDefault(__webpack_require__(789));
 const lodash_1 = __importDefault(__webpack_require__(557));
-;
 function objectToXml(obj, root) {
     const xmlified = {
         [root]: lodash_1.default.filter(lodash_1.default.map(obj[root], (val, key) => {

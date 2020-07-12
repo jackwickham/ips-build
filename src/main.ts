@@ -12,7 +12,7 @@ async function run(): Promise<void> {
       process.env["GITHUB_WORKSPACE"]!
     );
     const version = await getVersion(basePath);
-    const name = core.getInput("name");
+    const name = core.getInput("name", {required: true});
 
     const xmlPath = path.join(basePath, "plugin.xml");
 
@@ -27,7 +27,9 @@ async function run(): Promise<void> {
     );
     await fs.writeFile(xmlPath, await plugin.getXml(), "utf8");
 
-    await artifact.create().uploadArtifact(`${name}.xml`, ["plugin.xml"], basePath);
+    await artifact
+      .create()
+      .uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
   } catch (error) {
     core.setFailed(error.message);
   }
