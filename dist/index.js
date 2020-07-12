@@ -3683,7 +3683,9 @@ function run() {
             core.info(`Building ${name} version ${version.human} (${version.long})`);
             const plugin = new plugin_1.Plugin(basePath, name, version.human, version.long, core.getInput("website"));
             yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
-            yield artifact.create().uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
+            yield artifact
+                .create()
+                .uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
         }
         catch (error) {
             core.setFailed(error.message);
