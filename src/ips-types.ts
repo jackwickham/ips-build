@@ -1,6 +1,6 @@
 import {XmlObject} from "xml";
 
-/* eslint-disable @typescript-eslint/naming-convention -- Some types need underscores */
+/* eslint-disable @typescript-eslint/naming-convention */
 
 // Types that represent has has to be serialised into the XML file
 
