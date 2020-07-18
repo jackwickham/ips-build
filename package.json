@@ -27,7 +27,7 @@
   "license": "MIT",
   "dependencies": {
     "@actions/artifact": "^0.3.2",
-    "@actions/core": "^1.2.0",
+    "@actions/core": "^1.2.4",
     "@actions/exec": "^1.0.4",
     "@actions/glob": "^0.1.0",
     "@types/lodash": "^4.14.157",
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.4",
-    "@types/node": "^14.0.22",
+    "@types/node": "^14.0.23",
     "@typescript-eslint/parser": "^3.6.0",
     "@zeit/ncc": "^0.20.5",
     "eslint": "^5.16.0",
@@ -48,6 +48,6 @@
     "js-yaml": "^3.14.0",
     "prettier": "^1.19.1",
     "ts-jest": "^26.1.1",
-    "typescript": "^3.9.6"
+    "typescript": "^3.9.7"
   }
 }
