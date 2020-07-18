@@ -1,5 +1,7 @@
 import {XmlObject} from "xml";
 
+/* eslint-disable @typescript-eslint/naming-convention -- Some types need underscores */
+
 // Types that represent has has to be serialised into the XML file
 
 export type Hook = {

@@ -55,7 +55,7 @@ export class Plugin {
   }
 
   public async getData(): Promise<PluginData> {
-    /* eslint-disable @typescript-eslint/camelcase */
+    /* eslint-disable @typescript-eslint/naming-convention */
     return await allPromises<PluginData>({
       _attr: {
         name: this.name,
@@ -76,7 +76,7 @@ export class Plugin {
       lang: this.getLang(),
       versions: this.getVersions(),
     });
-    /* eslint-enable @typescript-eslint/camelcase */
+    /* eslint-enable @typescript-eslint/naming-convention */
   }
 
   public async getHooks(): Promise<Hook[]> {
