@@ -6,7 +6,14 @@ A GitHub action to build IPS plugins into XML files.
 
 ## Usage
 
-As a step in `.github/workflows/yourworkflow.yml`, add
+In `.github/workflows/yourworkflow.yml`, make sure that the checkout step sets
+the fetch depth to `0`, which means that it fetches all commits and tags:
+```yaml
+- uses: actions/checkout@v2
+  with:
+    fetch-depth: 0
+```
+Then add another step:
 ```yaml
 - uses: jackwickham/ips-plugin-build@v1
   with:

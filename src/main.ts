@@ -30,7 +30,7 @@ async function run(): Promise<void> {
 
     await artifact
       .create()
-      .uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
+      .uploadArtifact(`${name}`, [path.join(basePath, "plugin.xml")], basePath);
   } catch (error) {
     core.setFailed(error.message);
   }
