@@ -45,7 +45,18 @@
           "format": ["camelCase"],
           "leadingUnderscore": "forbid"
         },
-        {"selector": "property", "modifiers": ["readonly"], "format": ["UPPER_CASE"], "leadingUnderscore": "forbid"},
+        {
+          "selector": "property",
+          "modifiers": ["readonly", "static"],
+          "format": ["UPPER_CASE"],
+          "leadingUnderscore": "forbid"
+        },
+        {
+          "selector": "variable",
+          "custom": {"regex": "[a-z].*[A-Z]{3}|[A-Z]{3}.*[a-z]", "match": false},
+          "format": ["camelCase", "UPPER_CASE"],
+          "leadingUnderscore": "forbid"
+        },
         {
           "selector": "typeLike",
           "custom": {"regex": "[A-Z]{3}", "match": false},

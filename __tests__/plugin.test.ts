@@ -475,6 +475,19 @@ test("should continue when the version is present in versions.json", async () =>
   ]);
 });
 
+test("should fail if there is an install.php file but no version 10000", async () => {
+  setFile(
+    "dev/versions.json",
+    JSON.stringify({
+      "1000000": "1.0.0",
+    })
+  );
+  setFile("dev/setup/install.php", "setup file");
+
+  const plugin = new Plugin("", "", false, "1.0.0", 1000000, "");
+  await expect(plugin.getVersions()).rejects.toThrow();
+});
+
 test("should support having no uninstall code", async () => {
   const plugin = new Plugin("", "", false, "", 0, "");
   expect(await plugin.getUninstall()).toBeUndefined();

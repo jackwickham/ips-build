@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import {promises as fs} from "fs";
 import * as path from "path";
 import * as glob from "@actions/glob";
@@ -33,6 +34,9 @@ type MaybePromisify<T> = {
 async function allPromises<T extends object>(obj: MaybePromisify<T>): Promise<T> {
   return _.zipObject(_.keys(obj), await Promise.all(_.values(obj))) as T;
 }
+
+const INSTALL_PHP_44 = "bbf8db70ada6957e837f3633beb0532a";
+const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 
 export class Plugin {
   private basePath: string;
@@ -277,6 +281,24 @@ export class Plugin {
               }, doesn't match the tag version ${this.humanVersion}`
             );
           }
+        }
+        if (!_.isEmpty(versions) && !versions["10000"]) {
+          await this.readFileIfExistsOrElse(
+            "dev/setup/install.php",
+            (installFile) => {
+              const normalised = installFile.replace(/\r\n/g, "\n");
+              const hash = crypto
+                .createHash("md5")
+                .update(normalised)
+                .digest("hex");
+              if (hash !== INSTALL_PHP_44 && hash !== INSTALL_PHP_45) {
+                throw new Error(
+                  "File dev/setup/install.php exists and is modified, but you have no version with long id 10000"
+                );
+              }
+            },
+            undefined
+          );
         }
         return await Promise.all(
           _.map(versions, async (human, long) => {

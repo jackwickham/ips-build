@@ -5185,6 +5185,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Plugin = void 0;
+const crypto = __importStar(__webpack_require__(417));
 const fs_1 = __webpack_require__(747);
 const path = __importStar(__webpack_require__(622));
 const glob = __importStar(__webpack_require__(281));
@@ -5196,6 +5197,8 @@ function allPromises(obj) {
         return lodash_1.default.zipObject(lodash_1.default.keys(obj), yield Promise.all(lodash_1.default.values(obj)));
     });
 }
+const INSTALL_PHP_44 = "bbf8db70ada6957e837f3633beb0532a";
+const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 class Plugin {
     constructor(basePath, name, snapshot, humanVersion, longVersion, website) {
         this.name = name;
@@ -5214,7 +5217,7 @@ class Plugin {
     }
     getData() {
         return __awaiter(this, void 0, void 0, function* () {
-            /* eslint-disable @typescript-eslint/camelcase */
+            /* eslint-disable @typescript-eslint/naming-convention */
             return yield allPromises({
                 _attr: {
                     name: this.name,
@@ -5235,7 +5238,7 @@ class Plugin {
                 lang: this.getLang(),
                 versions: this.getVersions(),
             });
-            /* eslint-enable @typescript-eslint/camelcase */
+            /* eslint-enable @typescript-eslint/naming-convention */
         });
     }
     getHooks() {
@@ -5402,6 +5405,18 @@ class Plugin {
                     if (versions[this.longVersion] !== this.humanVersion) {
                         throw new Error(`The versions.json entry for ${this.longVersion}, ${versions[this.longVersion]}, doesn't match the tag version ${this.humanVersion}`);
                     }
+                }
+                if (!lodash_1.default.isEmpty(versions) && !versions["10000"]) {
+                    yield this.readFileIfExistsOrElse("dev/setup/install.php", (installFile) => {
+                        const normalised = installFile.replace(/\r\n/g, "\n");
+                        const hash = crypto
+                            .createHash("md5")
+                            .update(normalised)
+                            .digest("hex");
+                        if (hash !== INSTALL_PHP_44 && hash !== INSTALL_PHP_45) {
+                            throw new Error("File dev/setup/install.php exists and is modified, but you have no version with long id 10000");
+                        }
+                    }, undefined);
                 }
                 return yield Promise.all(lodash_1.default.map(versions, (human, long) => __awaiter(this, void 0, void 0, function* () {
                     const upgradeFile = yield this.readFileIfExistsOrElse(`dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`, (contents) => ({ _cdata: contents }), {});
