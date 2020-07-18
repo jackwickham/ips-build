@@ -1,4 +1,4 @@
-![build-test](https://github.com/lttforum/ips-plugin-build/workflows/build-test/badge.svg)
+![build-test](https://github.com/jackwickham/ips-plugin-build/workflows/build-test/badge.svg)
 
 # IPS Plugin Builder
 
@@ -8,7 +8,7 @@ A GitHub action to build IPS plugins into XML files.
 
 As a step in `.github/workflows/yourworkflow.yml`, add
 ```yaml
-- uses: lttforum/ips-plugin-build@v1
+- uses: jackwickham/ips-plugin-build@v1
   with:
     name: Your plugin name # Required
     author: Your name # Optional

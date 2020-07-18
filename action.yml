@@ -1,6 +1,6 @@
 name: 'IPS Plugin Build'
 description: 'Build an IPS plugin into a plugin XML'
-author: 'LTT Forum'
+author: 'Jack Wickham'
 inputs:
   name:
     description: 'The plugin name'
