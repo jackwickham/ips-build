@@ -3,7 +3,6 @@ import * as artifact from "@actions/artifact";
 import {promises as fs} from "fs";
 import * as path from "path";
 import {Plugin} from "./plugin";
-import {getVersion} from "./versions";
 
 async function run(): Promise<void> {
   try {
@@ -11,26 +10,19 @@ async function run(): Promise<void> {
       core.getInput("path") || "",
       process.env["GITHUB_WORKSPACE"]!
     );
-    const version = await getVersion(basePath);
     const name = core.getInput("name", {required: true});
+    const type = core.getInput("type", {required: true});
 
-    const xmlPath = path.join(basePath, "plugin.xml");
+    const xmlPath = path.join(basePath, `${name}.xml`);
 
-    core.info(`Building ${name} version ${version.human} (${version.long})`);
+    if (type === "plugin") {
+      const plugin = new Plugin(basePath, name, core.getInput("website"));
+      await fs.writeFile(xmlPath, await plugin.getXml(), "utf8");
+    } else {
+      throw new Error(`Type ${type} is not supported`);
+    }
 
-    const plugin = new Plugin(
-      basePath,
-      name,
-      version.snapshot,
-      version.human,
-      version.long,
-      core.getInput("website")
-    );
-    await fs.writeFile(xmlPath, await plugin.getXml(), "utf8");
-
-    await artifact
-      .create()
-      .uploadArtifact(`${name}`, [path.join(basePath, "plugin.xml")], basePath);
+    await artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
   } catch (error) {
     core.setFailed(error.message);
   }

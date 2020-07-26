@@ -6,7 +6,9 @@ export interface Version {
   snapshot: boolean;
 }
 
-const versionRegex = /^v?((\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?)$/;
+const versionRegex = /^((\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?)$/;
+const lenientVersionRegex = /^v?(\d+\.\d+\.\d+.*)/;
+const snapshotRegex = /-\d+-g[a-f0-9]+$/;
 
 export async function getVersion(path: string): Promise<Version> {
   const gitVersion = await getGitVersion(path);
@@ -39,7 +41,7 @@ export async function getVersion(path: string): Promise<Version> {
   };
 }
 
-async function getGitVersion(path: string): Promise<string> {
+export async function getGitVersion(path: string): Promise<string> {
   let output = "";
   const options = {
     listeners: {
@@ -56,5 +58,14 @@ async function getGitVersion(path: string): Promise<string> {
     );
   }
 
-  return output.trim();
+  const matches = lenientVersionRegex.exec(output.trim());
+  if (matches === null) {
+    throw new Error("Tag did not start with expected format v?\\d+.\\d+.\\d+");
+  }
+
+  return matches[1];
+}
+
+export function isSnapshot(version: string): boolean {
+  return snapshotRegex.test(version);
 }

@@ -26,6 +26,7 @@ import {
 } from "./ips-types";
 import * as xml from "./xml";
 import {parsePhpAssociativeArray} from "./php";
+import {getGitVersion, isSnapshot} from "./versions";
 
 type MaybePromisify<T> = {
   [K in keyof T]: T[K] | Promise<T[K]>;
@@ -41,14 +42,7 @@ const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 export class Plugin {
   private basePath: string;
 
-  public constructor(
-    basePath: string,
-    private name: string,
-    private snapshot: boolean,
-    private humanVersion: string,
-    private longVersion: number,
-    private website?: string
-  ) {
+  public constructor(basePath: string, private name: string, private website?: string) {
     this.basePath = basePath.endsWith("/") ? basePath.substring(0, basePath.length - 1) : basePath;
   }
 
@@ -59,14 +53,16 @@ export class Plugin {
   }
 
   public async getData(): Promise<PluginData> {
+    const versionInfoPromise = this.getVersions();
     /* eslint-disable @typescript-eslint/naming-convention */
+    /* eslint-disable github/no-then */
     return await allPromises<PluginData>({
-      _attr: {
+      _attr: allPromises({
         name: this.name,
-        version_human: this.humanVersion,
-        version_long: this.longVersion,
+        version_human: versionInfoPromise.then((v) => v.humanVersion),
+        version_long: versionInfoPromise.then((v) => v.longVersion),
         website: this.website,
-      },
+      }),
       hooks: this.getHooks(),
       settings: this.getSettings(),
       uninstall: this.getUninstall(),
@@ -78,8 +74,9 @@ export class Plugin {
       jsFiles: this.getJsFiles(),
       resourcesFiles: this.getResourceFiles(),
       lang: this.getLang(),
-      versions: this.getVersions(),
+      versions: versionInfoPromise.then((v) => v.versions),
     });
+    /* eslint-enable github/no-then */
     /* eslint-enable @typescript-eslint/naming-convention */
   }
 
@@ -263,24 +260,35 @@ export class Plugin {
     );
   }
 
-  public async getVersions(): Promise<Version[]> {
-    return await this.readFileIfExistsOrElse(
+  public async getVersions(): Promise<{
+    versions: Version[];
+    humanVersion: string;
+    longVersion: number;
+  }> {
+    const gitVersionPromise = getGitVersion(this.basePath);
+    return await this.readFileIfExistsOrElseGet(
       "dev/versions.json",
       async (versionsFile) => {
         const versions: VersionsFile = JSON.parse(versionsFile);
-        if (!this.snapshot) {
-          if (versions[this.longVersion] === undefined) {
+        const gitVersion = await gitVersionPromise;
+        const snapshot = isSnapshot(gitVersion);
+
+        let longVersion: number;
+        if (_.isEmpty(versions)) {
+          if (!snapshot && gitVersion !== "0.0.0") {
+            throw new Error(`Running on tag ${gitVersion}, but no versions found in versions.json`);
+          }
+          longVersion = 0;
+        } else if (snapshot) {
+          longVersion = parseInt(_.max(_.keys(versions))!, 10);
+        } else {
+          const maybeLongVersion = _.findKey(versions, (v) => v === gitVersion);
+          if (maybeLongVersion === undefined) {
             throw new Error(
-              `versions.json doesn't contain an entry for the current version ${this.longVersion}`
+              `versions.json doesn't contain an entry for the current version ${gitVersion}`
             );
           }
-          if (versions[this.longVersion] !== this.humanVersion) {
-            throw new Error(
-              `The versions.json entry for ${this.longVersion}, ${
-                versions[this.longVersion]
-              }, doesn't match the tag version ${this.humanVersion}`
-            );
-          }
+          longVersion = parseInt(maybeLongVersion, 10);
         }
         if (!_.isEmpty(versions) && !versions["10000"]) {
           await this.readFileIfExistsOrElse(
@@ -300,26 +308,34 @@ export class Plugin {
             undefined
           );
         }
-        return await Promise.all(
-          _.map(versions, async (human, long) => {
-            const upgradeFile = await this.readFileIfExistsOrElse<{_cdata?: string}>(
-              `dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`,
-              (contents) => ({_cdata: contents}),
-              {}
-            );
-            return {
-              version: {
-                ...upgradeFile,
-                _attr: {
-                  human,
-                  long,
+        return {
+          versions: await Promise.all(
+            _.map(versions, async (human, long) => {
+              const upgradeFile = await this.readFileIfExistsOrElse<{_cdata?: string}>(
+                `dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`,
+                (contents) => ({_cdata: contents}),
+                {}
+              );
+              return {
+                version: {
+                  ...upgradeFile,
+                  _attr: {
+                    human,
+                    long,
+                  },
                 },
-              },
-            };
-          })
-        );
+              };
+            })
+          ),
+          humanVersion: gitVersion,
+          longVersion,
+        };
       },
-      []
+      async () => ({
+        versions: [],
+        humanVersion: await gitVersionPromise,
+        longVersion: 0,
+      })
     );
   }
 
@@ -352,12 +368,20 @@ export class Plugin {
     ifPresent: (f: string) => T | Promise<T>,
     orElse: T
   ): Promise<T> {
+    return this.readFileIfExistsOrElseGet(file, ifPresent, () => orElse);
+  }
+
+  private async readFileIfExistsOrElseGet<T>(
+    file: string,
+    ifPresent: (f: string) => T | Promise<T>,
+    orElse: () => T | Promise<T>
+  ): Promise<T> {
     let contents;
     try {
       contents = await this.readFile(file);
     } catch (e) {
       if (e.code === "ENOENT") {
-        return orElse;
+        return await orElse();
       }
       throw e;
     }

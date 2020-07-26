@@ -3685,20 +3685,21 @@ const artifact = __importStar(__webpack_require__(214));
 const fs_1 = __webpack_require__(747);
 const path = __importStar(__webpack_require__(622));
 const plugin_1 = __webpack_require__(363);
-const versions_1 = __webpack_require__(235);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const basePath = path.resolve(core.getInput("path") || "", process.env["GITHUB_WORKSPACE"]);
-            const version = yield versions_1.getVersion(basePath);
             const name = core.getInput("name", { required: true });
-            const xmlPath = path.join(basePath, "plugin.xml");
-            core.info(`Building ${name} version ${version.human} (${version.long})`);
-            const plugin = new plugin_1.Plugin(basePath, name, version.snapshot, version.human, version.long, core.getInput("website"));
-            yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
-            yield artifact
-                .create()
-                .uploadArtifact(`${name}.xml`, [path.join(basePath, "plugin.xml")], basePath);
+            const type = core.getInput("type", { required: true });
+            const xmlPath = path.join(basePath, `${name}.xml`);
+            if (type === "plugin") {
+                const plugin = new plugin_1.Plugin(basePath, name, core.getInput("website"));
+                yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
+            }
+            else {
+                throw new Error(`Type ${type} is not supported`);
+            }
+            yield artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
         }
         catch (error) {
             core.setFailed(error.message);
@@ -3816,9 +3817,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getVersion = void 0;
+exports.isSnapshot = exports.getGitVersion = exports.getVersion = void 0;
 const exec_1 = __webpack_require__(986);
-const versionRegex = /^v?((\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?)$/;
+const versionRegex = /^((\d+)\.(\d+)\.(\d+)(?:-(\d+)-g[a-f0-9]+)?)$/;
+const lenientVersionRegex = /^v?(\d+\.\d+\.\d+.*)/;
+const snapshotRegex = /-\d+-g[a-f0-9]+$/;
 function getVersion(path) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
@@ -3860,9 +3863,18 @@ function getGitVersion(path) {
         if ((yield exec_1.exec("git", ["describe", "--tags"], options)) !== 0 || !output) {
             throw new Error("Failed to find a git tag. Make sure the repo is tagged and was checked out with fetch-depth: 0.");
         }
-        return output.trim();
+        const matches = lenientVersionRegex.exec(output.trim());
+        if (matches === null) {
+            throw new Error("Tag did not start with expected format v?\\d+.\\d+.\\d+");
+        }
+        return matches[1];
     });
 }
+exports.getGitVersion = getGitVersion;
+function isSnapshot(version) {
+    return snapshotRegex.test(version);
+}
+exports.isSnapshot = isSnapshot;
 
 
 /***/ }),
@@ -5192,6 +5204,7 @@ const glob = __importStar(__webpack_require__(281));
 const lodash_1 = __importDefault(__webpack_require__(557));
 const xml = __importStar(__webpack_require__(275));
 const php_1 = __webpack_require__(77);
+const versions_1 = __webpack_require__(235);
 function allPromises(obj) {
     return __awaiter(this, void 0, void 0, function* () {
         return lodash_1.default.zipObject(lodash_1.default.keys(obj), yield Promise.all(lodash_1.default.values(obj)));
@@ -5200,11 +5213,8 @@ function allPromises(obj) {
 const INSTALL_PHP_44 = "bbf8db70ada6957e837f3633beb0532a";
 const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 class Plugin {
-    constructor(basePath, name, snapshot, humanVersion, longVersion, website) {
+    constructor(basePath, name, website) {
         this.name = name;
-        this.snapshot = snapshot;
-        this.humanVersion = humanVersion;
-        this.longVersion = longVersion;
         this.website = website;
         this.basePath = basePath.endsWith("/") ? basePath.substring(0, basePath.length - 1) : basePath;
     }
@@ -5217,14 +5227,16 @@ class Plugin {
     }
     getData() {
         return __awaiter(this, void 0, void 0, function* () {
+            const versionInfoPromise = this.getVersions();
             /* eslint-disable @typescript-eslint/naming-convention */
+            /* eslint-disable github/no-then */
             return yield allPromises({
-                _attr: {
+                _attr: allPromises({
                     name: this.name,
-                    version_human: this.humanVersion,
-                    version_long: this.longVersion,
+                    version_human: versionInfoPromise.then((v) => v.humanVersion),
+                    version_long: versionInfoPromise.then((v) => v.longVersion),
                     website: this.website,
-                },
+                }),
                 hooks: this.getHooks(),
                 settings: this.getSettings(),
                 uninstall: this.getUninstall(),
@@ -5236,8 +5248,9 @@ class Plugin {
                 jsFiles: this.getJsFiles(),
                 resourcesFiles: this.getResourceFiles(),
                 lang: this.getLang(),
-                versions: this.getVersions(),
+                versions: versionInfoPromise.then((v) => v.versions),
             });
+            /* eslint-enable github/no-then */
             /* eslint-enable @typescript-eslint/naming-convention */
         });
     }
@@ -5396,15 +5409,27 @@ class Plugin {
     }
     getVersions() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.readFileIfExistsOrElse("dev/versions.json", (versionsFile) => __awaiter(this, void 0, void 0, function* () {
+            const gitVersionPromise = versions_1.getGitVersion(this.basePath);
+            return yield this.readFileIfExistsOrElseGet("dev/versions.json", (versionsFile) => __awaiter(this, void 0, void 0, function* () {
                 const versions = JSON.parse(versionsFile);
-                if (!this.snapshot) {
-                    if (versions[this.longVersion] === undefined) {
-                        throw new Error(`versions.json doesn't contain an entry for the current version ${this.longVersion}`);
+                const gitVersion = yield gitVersionPromise;
+                const snapshot = versions_1.isSnapshot(gitVersion);
+                let longVersion;
+                if (lodash_1.default.isEmpty(versions)) {
+                    if (!snapshot && gitVersion !== "0.0.0") {
+                        throw new Error(`Running on tag ${gitVersion}, but no versions found in versions.json`);
                     }
-                    if (versions[this.longVersion] !== this.humanVersion) {
-                        throw new Error(`The versions.json entry for ${this.longVersion}, ${versions[this.longVersion]}, doesn't match the tag version ${this.humanVersion}`);
+                    longVersion = 0;
+                }
+                else if (snapshot) {
+                    longVersion = parseInt(lodash_1.default.max(lodash_1.default.keys(versions)), 10);
+                }
+                else {
+                    const maybeLongVersion = lodash_1.default.findKey(versions, (v) => v === gitVersion);
+                    if (maybeLongVersion === undefined) {
+                        throw new Error(`versions.json doesn't contain an entry for the current version ${gitVersion}`);
                     }
+                    longVersion = parseInt(maybeLongVersion, 10);
                 }
                 if (!lodash_1.default.isEmpty(versions) && !versions["10000"]) {
                     yield this.readFileIfExistsOrElse("dev/setup/install.php", (installFile) => {
@@ -5418,16 +5443,26 @@ class Plugin {
                         }
                     }, undefined);
                 }
-                return yield Promise.all(lodash_1.default.map(versions, (human, long) => __awaiter(this, void 0, void 0, function* () {
-                    const upgradeFile = yield this.readFileIfExistsOrElse(`dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`, (contents) => ({ _cdata: contents }), {});
-                    return {
-                        version: Object.assign(Object.assign({}, upgradeFile), { _attr: {
-                                human,
-                                long,
-                            } }),
-                    };
-                })));
-            }), []);
+                return {
+                    versions: yield Promise.all(lodash_1.default.map(versions, (human, long) => __awaiter(this, void 0, void 0, function* () {
+                        const upgradeFile = yield this.readFileIfExistsOrElse(`dev/setup/${long === "10000" ? "install.php" : `${long}.php`}`, (contents) => ({ _cdata: contents }), {});
+                        return {
+                            version: Object.assign(Object.assign({}, upgradeFile), { _attr: {
+                                    human,
+                                    long,
+                                } }),
+                        };
+                    }))),
+                    humanVersion: gitVersion,
+                    longVersion,
+                };
+            }), () => __awaiter(this, void 0, void 0, function* () {
+                return ({
+                    versions: [],
+                    humanVersion: yield gitVersionPromise,
+                    longVersion: 0,
+                });
+            }));
         });
     }
     getUninstall() {
@@ -5451,13 +5486,18 @@ class Plugin {
     }
     readFileIfExistsOrElse(file, ifPresent, orElse) {
         return __awaiter(this, void 0, void 0, function* () {
+            return this.readFileIfExistsOrElseGet(file, ifPresent, () => orElse);
+        });
+    }
+    readFileIfExistsOrElseGet(file, ifPresent, orElse) {
+        return __awaiter(this, void 0, void 0, function* () {
             let contents;
             try {
                 contents = yield this.readFile(file);
             }
             catch (e) {
                 if (e.code === "ENOENT") {
-                    return orElse;
+                    return yield orElse();
                 }
                 throw e;
             }

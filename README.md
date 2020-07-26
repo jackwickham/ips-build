@@ -1,8 +1,8 @@
 ![build-test](https://github.com/jackwickham/ips-plugin-build/workflows/build-test/badge.svg)
 
-# IPS Plugin Builder
+# IPS Builder
 
-A GitHub action to build IPS plugins into XML files.
+A GitHub action to build IPS plugins and themes into XML files.
 
 ## Usage
 
@@ -15,7 +15,7 @@ the fetch depth to `0`, which means that it fetches all commits and tags:
 ```
 Then add another step:
 ```yaml
-- uses: jackwickham/ips-plugin-build@v1
+- uses: jackwickham/ips-build@v1
   with:
     name: Your plugin name # Required
     author: Your name # Optional

@@ -1,6 +1,7 @@
 import {Plugin} from "../src/plugin";
 import {mocked} from "ts-jest/utils";
 import * as importedGlob from "@actions/glob";
+import * as importedVersions from "../src/versions";
 
 let files: {[filename: string]: string};
 let globFiles: string[];
@@ -31,6 +32,9 @@ jest.mock("fs", () => ({
 jest.mock("@actions/glob");
 const glob = mocked(importedGlob, true);
 
+jest.mock("../src/versions");
+const versions = mocked(importedVersions, true);
+
 beforeEach(() => {
   files = {};
   globFiles = [];
@@ -59,7 +63,7 @@ test("should read all hooks", async () => {
   setFile("hooks/myCodeHook.php", "code hook");
   setFile("hooks/myThemeHook.php", "theme hook");
 
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getHooks()).toEqual([
     {
       hook: {
@@ -85,7 +89,7 @@ test("should read all hooks", async () => {
 });
 
 test("should support having no settings", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getSettings()).toEqual([]);
 });
 
@@ -104,7 +108,7 @@ test("should read all settings", async () => {
     ])
   );
 
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getSettings()).toEqual([
     {
       setting: [
@@ -130,7 +134,7 @@ test("should read all settings", async () => {
 });
 
 test("should support having no tasks", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getTasks()).toEqual([]);
 });
 
@@ -145,7 +149,7 @@ test("should read all tasks", async () => {
   setFile("tasks/task1.php", "task 1");
   setFile("tasks/task2.php", "task 2");
 
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getTasks()).toEqual([
     {
       task: {
@@ -169,7 +173,7 @@ test("should read all tasks", async () => {
 });
 
 test("should support having no widgets", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getWidgets()).toEqual([]);
 });
 
@@ -184,7 +188,7 @@ test("should read all widgets", async () => {
     })
   );
   setFile("widgets/myWidget.php", "my widget");
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getWidgets()).toEqual([
     {
       widget: {
@@ -216,7 +220,7 @@ test("should replace install-specific constants in widgets", async () => {
       "}\n"
   );
 
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getWidgets()).toEqual([
     {
       widget: {
@@ -240,7 +244,7 @@ test("should load all html files", async () => {
   setFile("/path/to/dev/html/2.phtml", "file 2");
   globFiles = ["/path/to/dev/html/dir/1.phtml", "/path/to/dev/html/2.phtml"];
 
-  const plugin = new Plugin("/path/to/", "", false, "", 0, "");
+  const plugin = new Plugin("/path/to/", "", "");
   expect(await plugin.getHtmlFiles()).toEqual([
     {
       html: [
@@ -270,7 +274,7 @@ test("should load all css files", async () => {
   setFile("/path/to/dev/css/dir/1.css", "file 1");
   globFiles = ["/path/to/dev/css/dir/1.css"];
 
-  const plugin = new Plugin("/path/to/", "", false, "", 0, "");
+  const plugin = new Plugin("/path/to/", "", "");
   expect(await plugin.getCssFiles()).toEqual([
     {
       css: [
@@ -290,7 +294,7 @@ test("should load all js files", async () => {
   setFile("/path/to/dev/js/dir/1.js", "file 1");
   globFiles = ["/path/to/dev/js/dir/1.js"];
 
-  const plugin = new Plugin("/path/to/", "", false, "", 0, "");
+  const plugin = new Plugin("/path/to/", "", "");
   expect(await plugin.getJsFiles()).toEqual([
     {
       js: [
@@ -310,7 +314,7 @@ test("should load all resource files", async () => {
   setFile("/path/to/dev/resources/dir/1.png", "file 1");
   globFiles = ["/path/to/dev/resources/dir/1.png"];
 
-  const plugin = new Plugin("/path/to/", "", false, "", 0, "");
+  const plugin = new Plugin("/path/to/", "", "");
   expect(await plugin.getResourceFiles()).toEqual([
     {
       resources: [
@@ -327,7 +331,7 @@ test("should load all resource files", async () => {
 });
 
 test("should support no lang files", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getLang()).toEqual([]);
 });
 
@@ -340,7 +344,7 @@ test("should read words from lang.php", async () => {
       "'word2' => 'translation2'\n" +
       "];"
   );
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getLang()).toEqual([
     {
       word: [
@@ -369,7 +373,7 @@ test("should read words from lang.php", async () => {
 
 test("should read words from jslang.php", async () => {
   setFile("dev/jslang.php", "<?php\n" + "$lang = array(\n" + "'word1' => 'translation1',\n" + "];");
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getLang()).toEqual([
     {
       word: [
@@ -396,36 +400,42 @@ test("should read versions from versions.json", async () => {
   );
   setFile("dev/setup/install.php", "install file");
   setFile("dev/setup/10100.php", "upgrade file");
+  versions.getGitVersion.mockImplementation(async () => "2.0.0+11");
+  versions.isSnapshot.mockImplementation((v) => true);
 
-  const plugin = new Plugin("", "", true, "2.0.0+11", 2000011, "");
-  expect(await plugin.getVersions()).toEqual([
-    {
-      version: {
-        _attr: {
-          long: "10000",
-          human: "1.0.0",
-        },
-        _cdata: "install file",
-      },
-    },
-    {
-      version: {
-        _attr: {
-          long: "10001",
-          human: "1.0.1",
+  const plugin = new Plugin("", "", "");
+  expect(await plugin.getVersions()).toEqual({
+    versions: [
+      {
+        version: {
+          _attr: {
+            long: "10000",
+            human: "1.0.0",
+          },
+          _cdata: "install file",
         },
       },
-    },
-    {
-      version: {
-        _attr: {
-          long: "10100",
-          human: "1.1.0",
+      {
+        version: {
+          _attr: {
+            long: "10001",
+            human: "1.0.1",
+          },
         },
-        _cdata: "upgrade file",
       },
-    },
-  ]);
+      {
+        version: {
+          _attr: {
+            long: "10100",
+            human: "1.1.0",
+          },
+          _cdata: "upgrade file",
+        },
+      },
+    ],
+    humanVersion: "2.0.0+11",
+    longVersion: 10100,
+  });
 });
 
 test("should validate that the current version is present in versions.json", async () => {
@@ -437,20 +447,10 @@ test("should validate that the current version is present in versions.json", asy
     })
   );
 
-  const plugin = new Plugin("", "", false, "2.0.0", 2000000, "");
-  await expect(plugin.getVersions()).rejects.toThrow();
-});
+  versions.getGitVersion.mockImplementation(async () => "2.0.0");
+  versions.isSnapshot.mockImplementation((v) => false);
 
-test("should validate that the current version matches the version in versions.json", async () => {
-  setFile(
-    "dev/versions.json",
-    JSON.stringify({
-      "10000": "1.0.0",
-      "2000000": "2.1.0",
-    })
-  );
-
-  const plugin = new Plugin("", "", false, "2.0.0", 2000000, "");
+  const plugin = new Plugin("", "", "");
   await expect(plugin.getVersions()).rejects.toThrow();
 });
 
@@ -458,21 +458,27 @@ test("should continue when the version is present in versions.json", async () =>
   setFile(
     "dev/versions.json",
     JSON.stringify({
-      "2000000": "2.0.0",
+      "20000": "2.0.0",
     })
   );
+  versions.getGitVersion.mockImplementation(async () => "2.0.0");
+  versions.isSnapshot.mockImplementation((v) => false);
 
-  const plugin = new Plugin("", "", false, "2.0.0", 2000000, "");
-  expect(await plugin.getVersions()).toEqual([
-    {
-      version: {
-        _attr: {
-          long: "2000000",
-          human: "2.0.0",
+  const plugin = new Plugin("", "", "");
+  expect(await plugin.getVersions()).toEqual({
+    versions: [
+      {
+        version: {
+          _attr: {
+            long: "20000",
+            human: "2.0.0",
+          },
         },
       },
-    },
-  ]);
+    ],
+    humanVersion: "2.0.0",
+    longVersion: 20000,
+  });
 });
 
 test("should fail if there is an install.php file but no version 10000", async () => {
@@ -483,32 +489,34 @@ test("should fail if there is an install.php file but no version 10000", async (
     })
   );
   setFile("dev/setup/install.php", "setup file");
+  versions.getGitVersion.mockImplementation(async () => "1.0.0");
+  versions.isSnapshot.mockImplementation((v) => false);
 
-  const plugin = new Plugin("", "", false, "1.0.0", 1000000, "");
+  const plugin = new Plugin("", "", "");
   await expect(plugin.getVersions()).rejects.toThrow();
 });
 
 test("should support having no uninstall code", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getUninstall()).toBeUndefined();
 });
 
 test("should read uninstall code", async () => {
   setFile("dev/uninstall.php", "my uninstall code");
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getUninstall()).toEqual({
     _cdata: "my uninstall code",
   });
 });
 
 test("should support having no settings code", async () => {
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getSettingsCode()).toBeUndefined();
 });
 
 test("should read settings code", async () => {
   setFile("dev/settings.php", "my settings code");
-  const plugin = new Plugin("", "", false, "", 0, "");
+  const plugin = new Plugin("", "", "");
   expect(await plugin.getSettingsCode()).toEqual({
     _cdata: "my settings code",
   });

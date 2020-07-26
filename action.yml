@@ -1,7 +1,10 @@
-name: 'IPS Plugin Build'
-description: 'Build an IPS plugin into a plugin XML'
+name: 'IPS Build'
+description: 'Build an IPS plugin or theme into the distribution XML'
 author: 'Jack Wickham'
 inputs:
+  type:
+    description: 'The type that is being built - either plugin or theme'
+    required: true
   name:
     description: 'The plugin name'
     required: true

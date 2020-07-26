@@ -1,6 +1,6 @@
 import * as importedExec from "@actions/exec";
 import {mocked} from "ts-jest/utils";
-import {getVersion} from "../src/versions";
+import {getVersion, getGitVersion} from "../src/versions";
 
 jest.mock("@actions/exec");
 const exec = mocked(importedExec, true);
@@ -66,6 +66,20 @@ test("should throw if exec fails", async () => {
   exec.exec.mockResolvedValue(1);
 
   await expect(getVersion(".")).rejects.toThrow();
+});
+
+test("should be more lenient when just getting the raw version", async () => {
+  const version = "v1.2.3.4-b5";
+  mockExec(version);
+
+  expect(await getGitVersion(".")).toEqual("1.2.3.4-b5");
+});
+
+test("should throw when getting the raw version if it's invalid", async () => {
+  const version = "not a version";
+  mockExec(version);
+
+  await expect(getGitVersion(".")).rejects.toThrow();
 });
 
 function mockExec(version: string) {
