@@ -1248,7 +1248,7 @@ class RegularPhpArrayParser extends PhpArrayParser {
         this.entries.push(this.readString());
     }
 }
-
+//# sourceMappingURL=php.js.map
 
 /***/ }),
 
@@ -3707,7 +3707,7 @@ function run() {
     });
 }
 run();
-
+//# sourceMappingURL=main.js.map
 
 /***/ }),
 
@@ -3849,7 +3849,7 @@ function getVersion(path) {
     });
 }
 exports.getVersion = getVersion;
-function getGitVersion(path) {
+function getGitVersion(path, maxVersionLength) {
     return __awaiter(this, void 0, void 0, function* () {
         let output = "";
         const options = {
@@ -3867,7 +3867,11 @@ function getGitVersion(path) {
         if (matches === null) {
             throw new Error("Tag did not start with expected format v?\\d+.\\d+.\\d+");
         }
-        return matches[1];
+        let version = matches[1];
+        if (maxVersionLength && version.length > maxVersionLength) {
+            version = version.substring(0, maxVersionLength);
+        }
+        return version;
     });
 }
 exports.getGitVersion = getGitVersion;
@@ -3875,7 +3879,7 @@ function isSnapshot(version) {
     return snapshotRegex.test(version);
 }
 exports.isSnapshot = isSnapshot;
-
+//# sourceMappingURL=versions.js.map
 
 /***/ }),
 
@@ -4399,7 +4403,7 @@ function convertForXml(obj) {
     }), (v) => v !== null);
 }
 exports.convertForXml = convertForXml;
-
+//# sourceMappingURL=xml.js.map
 
 /***/ }),
 
@@ -5227,14 +5231,13 @@ class Plugin {
     }
     getData() {
         return __awaiter(this, void 0, void 0, function* () {
-            const versionInfoPromise = this.getVersions();
+            const versionInfo = yield this.getVersions();
             /* eslint-disable @typescript-eslint/naming-convention */
-            /* eslint-disable github/no-then */
             return yield allPromises({
                 _attr: allPromises({
                     name: this.name,
-                    version_human: versionInfoPromise.then((v) => v.humanVersion),
-                    version_long: versionInfoPromise.then((v) => v.longVersion),
+                    version_human: versionInfo.humanVersion,
+                    version_long: versionInfo.longVersion,
                     website: this.website,
                 }),
                 hooks: this.getHooks(),
@@ -5248,9 +5251,8 @@ class Plugin {
                 jsFiles: this.getJsFiles(),
                 resourcesFiles: this.getResourceFiles(),
                 lang: this.getLang(),
-                versions: versionInfoPromise.then((v) => v.versions),
+                versions: versionInfo.versions,
             });
-            /* eslint-enable github/no-then */
             /* eslint-enable @typescript-eslint/naming-convention */
         });
     }
@@ -5409,7 +5411,7 @@ class Plugin {
     }
     getVersions() {
         return __awaiter(this, void 0, void 0, function* () {
-            const gitVersionPromise = versions_1.getGitVersion(this.basePath);
+            const gitVersionPromise = versions_1.getGitVersion(this.basePath, 14);
             return yield this.readFileIfExistsOrElseGet("dev/versions.json", (versionsFile) => __awaiter(this, void 0, void 0, function* () {
                 const versions = JSON.parse(versionsFile);
                 const gitVersion = yield gitVersionPromise;
@@ -5506,7 +5508,7 @@ class Plugin {
     }
 }
 exports.Plugin = Plugin;
-
+//# sourceMappingURL=plugin.js.map
 
 /***/ }),
 

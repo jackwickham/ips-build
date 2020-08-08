@@ -53,14 +53,13 @@ export class Plugin {
   }
 
   public async getData(): Promise<PluginData> {
-    const versionInfoPromise = this.getVersions();
+    const versionInfo = await this.getVersions();
     /* eslint-disable @typescript-eslint/naming-convention */
-    /* eslint-disable github/no-then */
     return await allPromises<PluginData>({
       _attr: allPromises({
         name: this.name,
-        version_human: versionInfoPromise.then((v) => v.humanVersion),
-        version_long: versionInfoPromise.then((v) => v.longVersion),
+        version_human: versionInfo.humanVersion,
+        version_long: versionInfo.longVersion,
         website: this.website,
       }),
       hooks: this.getHooks(),
@@ -74,9 +73,8 @@ export class Plugin {
       jsFiles: this.getJsFiles(),
       resourcesFiles: this.getResourceFiles(),
       lang: this.getLang(),
-      versions: versionInfoPromise.then((v) => v.versions),
+      versions: versionInfo.versions,
     });
-    /* eslint-enable github/no-then */
     /* eslint-enable @typescript-eslint/naming-convention */
   }
 
@@ -265,7 +263,7 @@ export class Plugin {
     humanVersion: string;
     longVersion: number;
   }> {
-    const gitVersionPromise = getGitVersion(this.basePath);
+    const gitVersionPromise = getGitVersion(this.basePath, 14);
     return await this.readFileIfExistsOrElseGet(
       "dev/versions.json",
       async (versionsFile) => {

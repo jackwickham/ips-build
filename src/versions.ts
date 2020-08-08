@@ -41,7 +41,7 @@ export async function getVersion(path: string): Promise<Version> {
   };
 }
 
-export async function getGitVersion(path: string): Promise<string> {
+export async function getGitVersion(path: string, maxVersionLength?: number): Promise<string> {
   let output = "";
   const options = {
     listeners: {
@@ -63,7 +63,12 @@ export async function getGitVersion(path: string): Promise<string> {
     throw new Error("Tag did not start with expected format v?\\d+.\\d+.\\d+");
   }
 
-  return matches[1];
+  let version = matches[1];
+  if (maxVersionLength && version.length > maxVersionLength) {
+    version = version.substring(0, maxVersionLength);
+  }
+
+  return version;
 }
 
 export function isSnapshot(version: string): boolean {

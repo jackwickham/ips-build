@@ -1,6 +1,6 @@
 {
   "name": "ips-plugin-build",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Github action for building IPS plugins",
   "main": "lib/main.js",
