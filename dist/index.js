@@ -5476,7 +5476,7 @@ class Plugin {
     }
     getSettingsCode() {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield this.readFileIfExistsOrElse("dev/settings.php", (contents) => ({
+            return yield this.readFileIfExistsOrElse("settings.php", (contents) => ({
                 _cdata: contents,
             }), undefined);
         });

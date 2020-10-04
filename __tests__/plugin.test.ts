@@ -515,7 +515,7 @@ test("should support having no settings code", async () => {
 });
 
 test("should read settings code", async () => {
-  setFile("dev/settings.php", "my settings code");
+  setFile("settings.php", "my settings code");
   const plugin = new Plugin("", "", "");
   expect(await plugin.getSettingsCode()).toEqual({
     _cdata: "my settings code",
