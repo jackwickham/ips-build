@@ -349,7 +349,7 @@ export class Plugin {
 
   public async getSettingsCode(): Promise<SettingsCode | undefined> {
     return await this.readFileIfExistsOrElse(
-      "dev/settings.php",
+      "settings.php",
       (contents) => ({
         _cdata: contents,
       }),
