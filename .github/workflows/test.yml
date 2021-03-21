@@ -1,10 +1,12 @@
 name: "build-test"
 on: # rebuild any PRs and main branch changes
-  pull_request:
+  pull_request: {}
+  create: {}
   push:
     branches:
       - master
       - 'releases/*'
+      - 'v*'
 
 jobs:
   build: # make sure build/ci work properly
