@@ -3688,10 +3688,11 @@ const plugin_1 = __webpack_require__(363);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const basePath = path.resolve(core.getInput("path") || "", process.env["GITHUB_WORKSPACE"]);
+            const basePath = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("path") || "");
             const name = core.getInput("name", { required: true });
             const type = core.getInput("type", { required: true });
-            const xmlPath = path.join(basePath, `${name}.xml`);
+            const outputDir = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("outputPath") || basePath);
+            const xmlPath = path.join(outputDir, `${name}.xml`);
             if (type === "plugin") {
                 const plugin = new plugin_1.Plugin(basePath, name, core.getInput("website"));
                 yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");

@@ -16,6 +16,12 @@ inputs:
     required: false
   path:
     description: 'The path to the plugin to build'
+  output-path:
+    description: 'The directory where the built plugin should be stored'
+    required: false
+outputs:
+  plugin-file:
+    description: 'The plugin XML file'
 runs:
   using: 'node12'
   main: 'dist/index.js'

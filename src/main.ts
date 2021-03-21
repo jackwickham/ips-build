@@ -7,13 +7,17 @@ import {Plugin} from "./plugin";
 async function run(): Promise<void> {
   try {
     const basePath: string = path.resolve(
-      core.getInput("path") || "",
-      process.env["GITHUB_WORKSPACE"]!
+      process.env["GITHUB_WORKSPACE"]!,
+      core.getInput("path") || ""
     );
     const name = core.getInput("name", {required: true});
     const type = core.getInput("type", {required: true});
 
-    const xmlPath = path.join(basePath, `${name}.xml`);
+    const outputDir = path.resolve(
+      process.env["GITHUB_WORKSPACE"]!,
+      core.getInput("output-path") || basePath
+    );
+    const xmlPath = path.join(outputDir, `${name}.xml`);
 
     if (type === "plugin") {
       const plugin = new Plugin(basePath, name, core.getInput("website"));
@@ -23,6 +27,8 @@ async function run(): Promise<void> {
     }
 
     await artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
+
+    core.setOutput("plugin-file", xmlPath);
   } catch (error) {
     core.setFailed(error.message);
   }
