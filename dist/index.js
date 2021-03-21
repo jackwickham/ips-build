@@ -3691,7 +3691,7 @@ function run() {
             const basePath = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("path") || "");
             const name = core.getInput("name", { required: true });
             const type = core.getInput("type", { required: true });
-            const outputDir = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("output-path") || basePath);
+            const outputDir = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("output-dir") || basePath);
             const xmlPath = path.join(outputDir, `${name}.xml`);
             if (type === "plugin") {
                 const plugin = new plugin_1.Plugin(basePath, name, core.getInput("website"));

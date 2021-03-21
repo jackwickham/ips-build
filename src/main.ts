@@ -15,7 +15,7 @@ async function run(): Promise<void> {
 
     const outputDir = path.resolve(
       process.env["GITHUB_WORKSPACE"]!,
-      core.getInput("output-path") || basePath
+      core.getInput("output-dir") || basePath
     );
     const xmlPath = path.join(outputDir, `${name}.xml`);
 

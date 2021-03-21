@@ -16,7 +16,7 @@ inputs:
     required: false
   path:
     description: 'The path to the plugin to build'
-  output-path:
+  output-dir:
     description: 'The directory where the built plugin should be stored'
     required: false
 outputs:
