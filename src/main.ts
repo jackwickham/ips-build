@@ -17,6 +17,9 @@ async function run(): Promise<void> {
       process.env["GITHUB_WORKSPACE"]!,
       core.getInput("output-dir") || basePath
     );
+    await fs.mkdir(outputDir, {
+      recursive: true,
+    });
     const xmlPath = path.join(outputDir, `${name}.xml`);
 
     if (type === "plugin") {
@@ -27,8 +30,6 @@ async function run(): Promise<void> {
     }
 
     await artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
-
-    core.setOutput("plugin-file", xmlPath);
   } catch (error) {
     core.setFailed(error.message);
   }

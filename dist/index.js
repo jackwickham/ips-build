@@ -3692,6 +3692,9 @@ function run() {
             const name = core.getInput("name", { required: true });
             const type = core.getInput("type", { required: true });
             const outputDir = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("output-dir") || basePath);
+            yield fs_1.promises.mkdir(outputDir, {
+                recursive: true
+            });
             const xmlPath = path.join(outputDir, `${name}.xml`);
             if (type === "plugin") {
                 const plugin = new plugin_1.Plugin(basePath, name, core.getInput("website"));
