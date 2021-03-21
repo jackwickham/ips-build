@@ -3693,7 +3693,7 @@ function run() {
             const type = core.getInput("type", { required: true });
             const outputDir = path.resolve(process.env["GITHUB_WORKSPACE"], core.getInput("output-dir") || basePath);
             yield fs_1.promises.mkdir(outputDir, {
-                recursive: true
+                recursive: true,
             });
             const xmlPath = path.join(outputDir, `${name}.xml`);
             if (type === "plugin") {
@@ -3704,7 +3704,6 @@ function run() {
                 throw new Error(`Type ${type} is not supported`);
             }
             yield artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
-            core.setOutput("plugin-file", xmlPath);
         }
         catch (error) {
             core.setFailed(error.message);
