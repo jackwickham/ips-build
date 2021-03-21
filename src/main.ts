@@ -23,7 +23,7 @@ async function run(): Promise<void> {
     const xmlPath = path.join(outputDir, `${name}.xml`);
 
     if (type === "plugin") {
-      const plugin = new Plugin(basePath, name, core.getInput("website"));
+      const plugin = new Plugin(basePath, name, core.getInput("author"), core.getInput("website"));
       await fs.writeFile(xmlPath, await plugin.getXml(), "utf8");
     } else {
       throw new Error(`Type ${type} is not supported`);

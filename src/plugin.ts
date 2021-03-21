@@ -42,7 +42,12 @@ const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 export class Plugin {
   private basePath: string;
 
-  public constructor(basePath: string, private name: string, private website?: string) {
+  public constructor(
+    basePath: string,
+    private name: string,
+    private author?: string,
+    private website?: string
+  ) {
     this.basePath = basePath.endsWith("/") ? basePath.substring(0, basePath.length - 1) : basePath;
   }
 
@@ -60,6 +65,7 @@ export class Plugin {
         name: this.name,
         version_human: versionInfo.humanVersion,
         version_long: versionInfo.longVersion,
+        author: this.author,
         website: this.website,
       }),
       hooks: this.getHooks(),

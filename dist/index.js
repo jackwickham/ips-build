@@ -3697,7 +3697,7 @@ function run() {
             });
             const xmlPath = path.join(outputDir, `${name}.xml`);
             if (type === "plugin") {
-                const plugin = new plugin_1.Plugin(basePath, name, core.getInput("website"));
+                const plugin = new plugin_1.Plugin(basePath, name, core.getInput("author"), core.getInput("website"));
                 yield fs_1.promises.writeFile(xmlPath, yield plugin.getXml(), "utf8");
             }
             else {
@@ -5221,8 +5221,9 @@ function allPromises(obj) {
 const INSTALL_PHP_44 = "bbf8db70ada6957e837f3633beb0532a";
 const INSTALL_PHP_45 = "8c377d7437144f4356d2f1e0fad0ea6f";
 class Plugin {
-    constructor(basePath, name, website) {
+    constructor(basePath, name, author, website) {
         this.name = name;
+        this.author = author;
         this.website = website;
         this.basePath = basePath.endsWith("/") ? basePath.substring(0, basePath.length - 1) : basePath;
     }
@@ -5242,6 +5243,7 @@ class Plugin {
                     name: this.name,
                     version_human: versionInfo.humanVersion,
                     version_long: versionInfo.longVersion,
+                    author: this.author,
                     website: this.website,
                 }),
                 hooks: this.getHooks(),
