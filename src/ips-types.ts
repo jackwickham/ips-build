@@ -22,7 +22,7 @@ export type Setting = {
     },
     {
       default: string;
-    }
+    },
   ];
 } & XmlObject;
 
@@ -52,7 +52,7 @@ export type ResourceContents = [
       filename: string;
     };
   },
-  string
+  string,
 ] &
   XmlObject;
 
@@ -80,7 +80,7 @@ export type LangWord = {
         js: 0 | 1;
       };
     },
-    string
+    string,
   ];
 } & XmlObject;
 
@@ -105,9 +105,7 @@ type CData = {
 export type Uninstall = CData;
 export type SettingsCode = CData;
 
-export interface XmlPrecursor {
-  [key: string]: XmlObject | XmlObject[] | undefined;
-}
+export type XmlPrecursor = Record<string, XmlObject | XmlObject[] | undefined>;
 
 export interface PluginData extends XmlPrecursor {
   _attr: {
@@ -135,33 +133,31 @@ export interface PluginData extends XmlPrecursor {
 
 // IPS json file types
 
-export interface HooksFile {
-  [key: string]: {
+export type HooksFile = Record<
+  string,
+  {
     type: string;
     class: string;
-  };
-}
+  }
+>;
 
 export type SettingsFile = {
   key: string;
   default: string;
 }[];
 
-export interface TasksFile {
-  [key: string]: string;
-}
+export type TasksFile = Record<string, string>;
 
-export interface WidgetsFile {
-  [key: string]: {
+export type WidgetsFile = Record<
+  string,
+  {
     class: string;
     restrict: string[];
     default_area: string;
     allow_reuse: boolean;
     menu_style: string;
     embeddable: boolean;
-  };
-}
+  }
+>;
 
-export interface VersionsFile {
-  [key: string]: string;
-}
+export type VersionsFile = Record<string, string>;

@@ -1,5 +1,4 @@
 import {Plugin} from "../src/plugin";
-import {mocked} from "ts-jest/utils";
 import * as importedGlob from "@actions/glob";
 import * as importedVersions from "../src/versions";
 
@@ -10,30 +9,35 @@ function setFile(path: string, contents: string) {
   files[path] = contents;
 }
 
-jest.mock("fs", () => ({
-  promises: {
-    readFile: jest.fn(async (path: string, charset?: string) => {
-      const file = files[path];
-      if (file) {
-        if (charset) {
-          return file;
-        } else {
-          return Buffer.from(file);
+jest.mock("fs", () => {
+  const actualFs = jest.requireActual("fs");
+  return {
+    ...actualFs,
+    promises: {
+      readFile: jest.fn(async (path: string, charset?: string) => {
+        const file = files[path];
+        if (file) {
+          if (charset) {
+            return file;
+          } else {
+            return Buffer.from(file);
+          }
         }
-      }
-      const err: any = new Error(`Error: ENOENT: no such file or directory: ${path} (stubbed)`);
-      err.code = "ENOENT";
-      err.errno = -2;
-      throw err;
-    }),
-  },
-}));
+        const err: any = new Error(`Error: ENOENT: no such file or directory: ${path} (stubbed)`);
+        err.code = "ENOENT";
+        err.errno = -2;
+        throw err;
+      }),
+    },
+    constants: actualFs.constants,
+  };
+});
 
 jest.mock("@actions/glob");
-const glob = mocked(importedGlob, true);
+const glob = jest.mocked(importedGlob);
 
 jest.mock("../src/versions");
-const versions = mocked(importedVersions, true);
+const versions = jest.mocked(importedVersions);
 
 beforeEach(() => {
   files = {};
@@ -42,7 +46,7 @@ beforeEach(() => {
     async () =>
       ({
         glob: async () => globFiles,
-      } as importedGlob.Globber)
+      }) as importedGlob.Globber
   );
 });
 
@@ -401,7 +405,7 @@ test("should read versions from versions.json", async () => {
   setFile("dev/setup/install.php", "install file");
   setFile("dev/setup/10100.php", "upgrade file");
   versions.getGitVersion.mockImplementation(async () => "2.0.0+11");
-  versions.isSnapshot.mockImplementation((v) => true);
+  versions.isSnapshot.mockImplementation(() => true);
 
   const plugin = new Plugin("", "", "");
   expect(await plugin.getVersions()).toEqual({
@@ -448,7 +452,7 @@ test("should validate that the current version is present in versions.json", asy
   );
 
   versions.getGitVersion.mockImplementation(async () => "2.0.0");
-  versions.isSnapshot.mockImplementation((v) => false);
+  versions.isSnapshot.mockImplementation(() => false);
 
   const plugin = new Plugin("", "", "");
   await expect(plugin.getVersions()).rejects.toThrow();
@@ -462,7 +466,7 @@ test("should continue when the version is present in versions.json", async () =>
     })
   );
   versions.getGitVersion.mockImplementation(async () => "2.0.0");
-  versions.isSnapshot.mockImplementation((v) => false);
+  versions.isSnapshot.mockImplementation(() => false);
 
   const plugin = new Plugin("", "", "");
   expect(await plugin.getVersions()).toEqual({
@@ -490,7 +494,7 @@ test("should fail if there is an install.php file but no version 10000", async (
   );
   setFile("dev/setup/install.php", "setup file");
   versions.getGitVersion.mockImplementation(async () => "1.0.0");
-  versions.isSnapshot.mockImplementation((v) => false);
+  versions.isSnapshot.mockImplementation(() => false);
 
   const plugin = new Plugin("", "", "");
   await expect(plugin.getVersions()).rejects.toThrow();
