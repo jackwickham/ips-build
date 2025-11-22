@@ -3,13 +3,14 @@ const skipRegex = /^(?:\s+|\/\/.*|#.*|\/\*[^]*?\*\/?)/;
 const endRegex = /^(?:\]|\))\s*;/;
 const singleQuotedStringRegex = /^((?:[^'\\]|\\.)*)'/;
 const doubleQuotedStringRegex = /^((?:[^"\\]|\\.)*)"/;
-const escapeSequenceRegex = /\\(n|r|t|v|e|f|\\|\$|"|(\d{1,3})|x([0-9a-fA-F]{1,2})|u\{([0-9a-fA-F]+)\})/;
+const escapeSequenceRegex =
+  /\\(n|r|t|v|e|f|\\|\$|"|(\d{1,3})|x([0-9a-fA-F]{1,2})|u\{([0-9a-fA-F]+)\})/;
 
 export function parsePhpArray(php: string): string[] {
   return new RegularPhpArrayParser(php).parse();
 }
 
-export function parsePhpAssociativeArray(php: string): {[key: string]: unknown} {
+export function parsePhpAssociativeArray(php: string): Record<string, unknown> {
   return new AssociativePhpArrayParser(php).parse();
 }
 
@@ -87,7 +88,13 @@ abstract class PhpArrayParser {
     // https://www.php.net/manual/en/language.types.string.php#language.types.string.syntax.double
     return result[1].replace(
       escapeSequenceRegex,
-      (_match, escaped, octalEscaped, hexEscaped, unicodeEscaped) => {
+      (
+        _match: string,
+        escaped: string,
+        octalEscaped: string,
+        hexEscaped: string,
+        unicodeEscaped: string
+      ) => {
         switch (escaped) {
           case "n":
             return "\n";
@@ -155,13 +162,13 @@ abstract class PhpArrayParser {
 }
 
 class AssociativePhpArrayParser extends PhpArrayParser {
-  private entries: {[key: string]: string} = {};
+  private entries: Record<string, string> = {};
 
   public constructor(remaining: string) {
     super(remaining);
   }
 
-  public parse(): {[key: string]: string} {
+  public parse(): Record<string, string> {
     this.parseImpl();
     return this.entries;
   }

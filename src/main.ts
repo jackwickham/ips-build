@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import * as artifact from "@actions/artifact";
+import artifact from "@actions/artifact";
 import {promises as fs} from "fs";
 import * as path from "path";
 import {Plugin} from "./plugin";
@@ -7,14 +7,14 @@ import {Plugin} from "./plugin";
 async function run(): Promise<void> {
   try {
     const basePath: string = path.resolve(
-      process.env["GITHUB_WORKSPACE"]!,
+      process.env.GITHUB_WORKSPACE!,
       core.getInput("path") || ""
     );
     const name = core.getInput("name", {required: true});
     const type = core.getInput("type", {required: true});
 
     const outputDir = path.resolve(
-      process.env["GITHUB_WORKSPACE"]!,
+      process.env.GITHUB_WORKSPACE!,
       core.getInput("output-dir") || basePath
     );
     await fs.mkdir(outputDir, {
@@ -29,10 +29,14 @@ async function run(): Promise<void> {
       throw new Error(`Type ${type} is not supported`);
     }
 
-    await artifact.create().uploadArtifact(`${name}`, [xmlPath], basePath);
+    await artifact.uploadArtifact(name, [xmlPath], basePath);
   } catch (error) {
-    core.setFailed(error.message);
+    if (error instanceof Error) {
+      core.setFailed(error.message);
+    } else {
+      core.setFailed(String(error));
+    }
   }
 }
 
-run();
+void run();

@@ -85,7 +85,7 @@ export class Plugin {
   }
 
   public async getHooks(): Promise<Hook[]> {
-    const hooks: HooksFile = JSON.parse(await this.readFile("dev/hooks.json"));
+    const hooks = JSON.parse(await this.readFile("dev/hooks.json")) as HooksFile;
     return Promise.all(
       _.map(hooks, async (hook, key) => ({
         hook: {
@@ -103,8 +103,8 @@ export class Plugin {
   public async getSettings(): Promise<Setting[]> {
     return await this.readFileIfExistsOrElse(
       "dev/settings.json",
-      async (file) => {
-        const settings: SettingsFile = JSON.parse(file);
+      (file) => {
+        const settings = JSON.parse(file) as SettingsFile;
         return settings.map((setting) => ({
           setting: [
             {
@@ -124,7 +124,7 @@ export class Plugin {
     return await this.readFileIfExistsOrElse(
       "dev/tasks.json",
       async (file) => {
-        const tasks: TasksFile = JSON.parse(file);
+        const tasks = JSON.parse(file) as TasksFile;
         return await Promise.all(
           _.map(tasks, async (frequency, key) => ({
             task: {
@@ -142,7 +142,7 @@ export class Plugin {
     return await this.readFileIfExistsOrElse(
       "dev/widgets.json",
       async (file) => {
-        const widgets: WidgetsFile = JSON.parse(file);
+        const widgets = JSON.parse(file) as WidgetsFile;
         return await Promise.all(
           _.map(widgets, async (data, key) => {
             const contents = (await this.readFile(`widgets/${key}.php`))
@@ -244,7 +244,7 @@ export class Plugin {
         ),
         this.readFileIfExistsOrElse(
           "dev/jslang.php",
-          async (file) => {
+          (file) => {
             const words = parsePhpAssociativeArray(file);
             return _.map<object, LangWord>(words, (value, key) => ({
               word: [
@@ -273,7 +273,7 @@ export class Plugin {
     return await this.readFileIfExistsOrElseGet(
       "dev/versions.json",
       async (versionsFile) => {
-        const versions: VersionsFile = JSON.parse(versionsFile);
+        const versions = JSON.parse(versionsFile) as VersionsFile;
         const gitVersion = await gitVersionPromise;
         const snapshot = isSnapshot(gitVersion);
 
@@ -299,10 +299,7 @@ export class Plugin {
             "dev/setup/install.php",
             (installFile) => {
               const normalised = installFile.replace(/\r\n/g, "\n");
-              const hash = crypto
-                .createHash("md5")
-                .update(normalised)
-                .digest("hex");
+              const hash = crypto.createHash("md5").update(normalised).digest("hex");
               if (hash !== INSTALL_PHP_44 && hash !== INSTALL_PHP_45) {
                 throw new Error(
                   "File dev/setup/install.php exists and is modified, but you have no version with long id 10000"
@@ -384,7 +381,8 @@ export class Plugin {
     try {
       contents = await this.readFile(file);
     } catch (e) {
-      if (e.code === "ENOENT") {
+      const error = e as NodeJS.ErrnoException;
+      if (error.code === "ENOENT") {
         return await orElse();
       }
       throw e;

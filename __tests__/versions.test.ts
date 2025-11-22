@@ -1,9 +1,8 @@
 import * as importedExec from "@actions/exec";
-import {mocked} from "ts-jest/utils";
 import {getVersion, getGitVersion} from "../src/versions";
 
 jest.mock("@actions/exec");
-const exec = mocked(importedExec, true);
+const exec = jest.mocked(importedExec);
 
 test("should handle being directly on a tag", async () => {
   const version = "1.2.3";
