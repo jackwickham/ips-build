@@ -30,7 +30,7 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/glob": "^0.5.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "xml": "^1.0.1"
   },
   "devDependencies": {
